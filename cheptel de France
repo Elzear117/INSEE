@@ -1,0 +1,163 @@
+# Partie 2 - Cheptel 
+
+# Auteurs : Lionel Elzear
+
+install.packages("insee")
+library(insee)
+install.packages("dplyr")
+library(dplyr)
+
+### Development version
+devtools::install_github("InseeFr/R-Insee-Data")
+
+library(tidyverse,warn.conflicts = F)
+library(knitr)
+
+# chargment des listes de tableaux
+insee_dataset = get_dataset_list()
+var <- get_idbank_list("TCRED-AGRICULTURE-CHEP-AGRI")
+str(var)
+
+# Sélection des données Isère "001752413"
+che38 <-get_insee_idbank("001752413")
+
+che38<-che38[order(che38$DATE),1:3]
+plot(che38$DATE,che38$OBS_VALUE, 
+     type ="l", 
+     col="blue", 
+     ylab = "Nombres d'exploitations caprines (en milliers)",
+     xlab = "Données annuelles",
+     main = "Evolution des exploitations caprines en Isère (2010-2020)",
+     sub = "Source : Insee")
+
+# Travail sur les données cheptel-par département
+departements <- sprintf("D%02d", 1:976)
+
+# 1-données des caprins
+chec <- get_idbank_list("TCRED-AGRICULTURE-CHEP-AGRI") %>% 
+  filter(AGRICOLE == "CAP")%>% # %in%c(  ,"BOV","POR","OV")) %>% 
+  filter(REF_AREA %in% departements)
+
+kable(head(chec))  
+
+chec = get_insee_idbank(chec$idbank)
+
+chec <- chec %>%
+  group_by(TIME_PERIOD) %>%
+  summarise(SOMME_OBS_VALUE = sum(OBS_VALUE, na.rm = TRUE))
+
+
+chec<-chec[order(chec$TIME_PERIOD),1:2]
+plot(chec$TIME_PERIOD,chec$SOMME_OBS_VALUE, 
+     type ="l", 
+     col="blue", 
+     ylab = "Nombres de caprins (en milliers)",
+     xlab = "Données annuelles",
+     main = "Evolution des caprins - France métropolitaine, Outre-Mer(2010-2022)",
+     sub = "Source : Insee")  
+  
+# 2-données des Bovins
+cheb <- get_idbank_list("TCRED-AGRICULTURE-CHEP-AGRI") %>% 
+  filter(AGRICOLE == "BOV")%>% # %in%c(  ,"BOV","POR","OV")) %>% 
+  filter(REF_AREA %in% departements)
+
+cheb = get_insee_idbank(cheb$idbank)
+
+cheb <- cheb %>%
+  group_by(TIME_PERIOD) %>%
+  summarise(SOMME_OBS_VALUE = sum(OBS_VALUE, na.rm = TRUE))
+
+
+cheb<-cheb[order(cheb$TIME_PERIOD),1:2]
+plot(cheb$TIME_PERIOD,cheb$SOMME_OBS_VALUE, 
+     type ="l", 
+     col="brown", 
+     ylab = "Nombres d'animaux d'élevages (en milliers)",
+     xlab = "Données annuelles",
+     main = "Evolution des animaux d'élevages (2010-2022)",
+     sub = "Source : Insee") 
+
+# 3-données des Porcins
+chep <- get_idbank_list("TCRED-AGRICULTURE-CHEP-AGRI") %>% 
+  filter(AGRICOLE == "POR")%>% # %in%c(  ,"BOV","POR","OV")) %>% 
+  filter(REF_AREA %in% departements)
+
+chep = get_insee_idbank(chep$idbank)
+
+chep <- chep %>%
+  group_by(TIME_PERIOD) %>%
+  summarise(SOMME_OBS_VALUE = sum(OBS_VALUE, na.rm = TRUE))
+
+
+chep<-chep[order(chep$TIME_PERIOD),1:2]
+plot(chep$TIME_PERIOD,chep$SOMME_OBS_VALUE, 
+     type ="l", 
+     col="pink", 
+     ylab = "Nombres d'animaux d'élevages (en milliers)",
+     xlab = "Données annuelles",
+     main = "Evolution des animaux d'élevages (2010-2022)",
+     sub = "Source : Insee") 
+
+# 4-données des Ovins
+cheo <- get_idbank_list("TCRED-AGRICULTURE-CHEP-AGRI") %>% 
+  filter(AGRICOLE == "OV")%>% # %in%c(  ,"BOV","POR","OV")) %>% 
+  filter(REF_AREA %in% departements)
+
+cheo = get_insee_idbank(cheo$idbank)
+
+cheo <- cheo %>%
+  group_by(TIME_PERIOD) %>%
+  summarise(SOMME_OBS_VALUE = sum(OBS_VALUE, na.rm = TRUE))
+
+
+cheo<-cheo[order(cheo$TIME_PERIOD),1:2]
+plot(cheo$TIME_PERIOD,cheo$SOMME_OBS_VALUE, 
+     type ="l", 
+     col="grey", 
+     ylab = "Nombres d'animaux d'élevages (en milliers)",
+     xlab = "Données annuelles",
+     main = "Evolution des animaux d'élevages (2010-2022)",
+     sub = "Source : Insee") 
+
+# superposition des graphiques
+# superposition des graphiques avec left_join
+chept <- left_join(cheb, chec, by = "TIME_PERIOD", suffix = c("_cheb", "_chec"))
+chept <- left_join(chept, cheo, by = "TIME_PERIOD", suffix = c("_chept", "_cheo"))
+chept <- left_join(chept, chep, by = "TIME_PERIOD", suffix = c("_chept", "_chep"))
+colnames(chept) <- c("TIME_PERIOD","BOV","CAP","OV","POR")
+chept$TIME_PERIOD <- as.Date(chept$TIME_PERIOD, format="%Y")
+head(chept)
+
+# représentation graphique
+library(ggplot2)
+
+# les 4 ligne superposer
+ggplot(chept, aes(x = TIME_PERIOD))+
+  geom_line(aes(y=BOV), color="darkred") +
+  geom_line(aes(y=CAP),color="steelblue") +
+  geom_line(aes(y=OV),color="grey") +
+  geom_line(aes(y=POR),color="pink") 
+
+
+ggplot(cheptel, aes(x = TIME_PERIOD))+
+  geom_area(aes(y=BOV), fill = "#999999", 
+            color = "#99999999", alpha=0.2) +
+  geom_area(aes(y=CAP), fill = "#E69F00",
+            color = "#E69F00", alpha=1) +
+  geom_area(aes(y=OV), fill = "#CC99CC",
+            color = "#FFCCFF", alpha=0.5) +
+  geom_area(aes(y=POR), fill = "#009966",
+            color = "#99FFCC", alpha=0.2)+ 
+  theme(legend.position="right") +
+  ylab("Nombres d'animaux d'élevages (en milliers)")+
+  xlab("Données annuelles")+
+  labs(caption = "Source : Insee-2022")+
+  ggtitle("Evolution des animaux d'élevages (2010-2022)")
+
+# source :
+# https://www.rdocumentation.org/packages/insee/versions/1.1.5
+# https://inseefrlab.github.io/DoReMIFaSol/
+# https://rgeomatic.hypotheses.org/659
+# https://www.datanovia.com/en/fr/lessons/ggplot-line-plot/
+# https://statorials.org/legende-ggplot/
+# https://delladata.fr/mise-en-forme-graphiques-ggplot2/
